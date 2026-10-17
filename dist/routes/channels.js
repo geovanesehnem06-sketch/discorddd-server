@@ -26,7 +26,7 @@ export const channelRoutes = async (app) => {
         if (membership.rows.length === 0) {
             return reply.status(403).send({ error: 'Not a member of this server' });
         }
-        const result = await pool.query(`INSERT INTO channels (server_id, parent_id, name, type, topic, position, nsfw, bitrate, user_limit)
+        await pool.query(`INSERT INTO channels (server_id, parent_id, name, type, topic, position, nsfw, bitrate, user_limit)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
             body.serverId,
             body.parentId || null,
@@ -38,7 +38,8 @@ export const channelRoutes = async (app) => {
             body.bitrate || null,
             body.userLimit || null,
         ]);
-        const channel = await pool.query('SELECT * FROM channels WHERE id = ?', [result.lastInsertRowid]);
+        // Fetch the just-inserted channel by server_id + name + type (UUID primary key makes lastInsertRowid unreliable)
+        const channel = await pool.query('SELECT * FROM channels WHERE server_id = ? AND name = ? AND type = ? ORDER BY rowid DESC LIMIT 1', [body.serverId, body.name, body.type]);
         return reply.status(201).send(channel.rows[0]);
     });
     // Get channel by ID

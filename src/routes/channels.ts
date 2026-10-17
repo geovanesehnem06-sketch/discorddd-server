@@ -36,7 +36,7 @@ export const channelRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(403).send({ error: 'Not a member of this server' });
     }
 
-    const result = await pool.query(
+    await pool.query(
       `INSERT INTO channels (server_id, parent_id, name, type, topic, position, nsfw, bitrate, user_limit)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -52,7 +52,11 @@ export const channelRoutes: FastifyPluginAsync = async (app) => {
       ]
     );
 
-    const channel = await pool.query('SELECT * FROM channels WHERE id = ?', [result.lastInsertRowid]);
+    // Fetch the just-inserted channel by server_id + name + type (UUID primary key makes lastInsertRowid unreliable)
+    const channel = await pool.query(
+      'SELECT * FROM channels WHERE server_id = ? AND name = ? AND type = ? ORDER BY rowid DESC LIMIT 1',
+      [body.serverId, body.name, body.type]
+    );
     return reply.status(201).send(channel.rows[0]);
   });
 
