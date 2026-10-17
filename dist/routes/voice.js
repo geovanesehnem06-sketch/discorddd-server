@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { AccessToken } from 'livekit-server-sdk';
 import { pool } from '../db/pool.js';
 import { authenticate } from '../middleware/auth.js';
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || 'APIbYbpL9e5pXZT';
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || 'IQPDtpungZYdC19EGi2BfqKzUCF4o8vUeARPVgJAG1t';
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || '';
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || '';
 const LIVEKIT_URL = process.env.LIVEKIT_URL || 'wss://alemao-u35k42ow.livekit.cloud';
 export const voiceRoutes = async (app) => {
     // Generate LiveKit access token for joining a voice channel
