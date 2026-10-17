@@ -1,0 +1,1 @@
+{"$schema":"https://railway.app/railway.schema.json","build":{"nixpacksVersion":"1.22.0"},"deploy":{"startCommand":"node dist/index.js"}}
