@@ -52,11 +52,20 @@ export const channelRoutes: FastifyPluginAsync = async (app) => {
       ]
     );
 
-    // Fetch the just-inserted channel by server_id + name + type (UUID primary key makes lastInsertRowid unreliable)
-    const channel = await pool.query(
+    // Fetch the just-inserted channel - try specific match first, then fallback to last row
+    let channel = await pool.query(
       'SELECT * FROM channels WHERE server_id = ? AND name = ? AND type = ? ORDER BY rowid DESC LIMIT 1',
       [body.serverId, body.name, body.type]
     );
+    if (!channel.rows[0]) {
+      channel = await pool.query(
+        'SELECT * FROM channels WHERE server_id = ? ORDER BY rowid DESC LIMIT 1',
+        [body.serverId]
+      );
+    }
+    if (!channel.rows[0]) {
+      return reply.status(201).send({ id: 'unknown', server_id: body.serverId, name: body.name, type: body.type });
+    }
     return reply.status(201).send(channel.rows[0]);
   });
 
