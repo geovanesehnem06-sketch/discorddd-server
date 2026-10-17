@@ -36,7 +36,7 @@ export const channelRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(403).send({ error: 'Not a member of this server' });
     }
 
-    await pool.query(
+    const insertResult = pool.query(
       `INSERT INTO channels (server_id, parent_id, name, type, topic, position, nsfw, bitrate, user_limit)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -52,21 +52,22 @@ export const channelRoutes: FastifyPluginAsync = async (app) => {
       ]
     );
 
-    // Fetch the just-inserted channel - try specific match first, then fallback to last row
-    let channel = await pool.query(
-      'SELECT * FROM channels WHERE server_id = ? AND name = ? AND type = ? ORDER BY rowid DESC LIMIT 1',
-      [body.serverId, body.name, body.type]
-    );
-    if (!channel.rows[0]) {
-      channel = await pool.query(
-        'SELECT * FROM channels WHERE server_id = ? ORDER BY rowid DESC LIMIT 1',
-        [body.serverId]
-      );
+    // Use the row returned by INSERT directly (pool.query fetches it via ORDER BY rowid DESC)
+    if (insertResult.rows[0]) {
+      return reply.status(201).send(insertResult.rows[0]);
     }
-    if (!channel.rows[0]) {
-      return reply.status(201).send({ id: 'unknown', server_id: body.serverId, name: body.name, type: body.type });
-    }
-    return reply.status(201).send(channel.rows[0]);
+    // Fallback: construct response from request data if DB fetch failed
+    return reply.status(201).send({
+      id: 'pending',
+      server_id: body.serverId,
+      name: body.name,
+      type: body.type,
+      topic: body.topic || null,
+      position: body.position || 0,
+      nsfw: body.nsfw ? 1 : 0,
+      bitrate: body.bitrate || null,
+      user_limit: body.userLimit || null,
+    });
   });
 
   // Get channel by ID
