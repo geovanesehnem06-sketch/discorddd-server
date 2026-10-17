@@ -4,8 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
-    "postinstall": "tsc"
+    "start": "node dist/index.js"
   },
   "dependencies": {
     "argon2": "^0.41.0",
