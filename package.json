@@ -1,0 +1,31 @@
+{
+  "name": "discorddd-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "argon2": "^0.41.0",
+    "sql.js": "^1.11.0",
+    "dotenv": "^16.4.0",
+    "fastify": "^5.0.0",
+    "@fastify/cors": "^10.0.0",
+    "@fastify/websocket": "^11.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "livekit-server-sdk": "^2.6.0",
+    "zod": "^3.23.0",
+    "pino": "^9.4.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/jsonwebtoken": "^9.0.0",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
