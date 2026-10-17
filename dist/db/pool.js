@@ -178,7 +178,7 @@ export function query(sql, params = []) {
             lastInsertRowid = changesResult[0].values[0][1];
         }
         // After any INSERT, fetch the inserted row
-        if (trimmed.startsWith('INSERT') && lastInsertRowid) {
+        if (trimmed.startsWith('INSERT') && changes > 0) {
             const tableMatch = sql.match(/INSERT\s+INTO\s+(\w+)/i);
             if (tableMatch) {
                 const tableName = tableMatch[1];
