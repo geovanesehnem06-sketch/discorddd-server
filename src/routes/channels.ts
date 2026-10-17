@@ -1,8 +1,13 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { randomBytes } from 'crypto';
 import { pool } from '../db/pool.js';
 import { authenticate } from '../middleware/auth.js';
 import { broadcastToChannel } from '../ws/handler.js';
+
+function generateId(): string {
+  return randomBytes(16).toString('hex');
+}
 
 const createChannelSchema = z.object({
   serverId: z.string(),
@@ -36,10 +41,12 @@ export const channelRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(403).send({ error: 'Not a member of this server' });
     }
 
-    const insertResult = pool.query(
-      `INSERT INTO channels (server_id, parent_id, name, type, topic, position, nsfw, bitrate, user_limit)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    const channelId = generateId();
+    pool.query(
+      `INSERT INTO channels (id, server_id, parent_id, name, type, topic, position, nsfw, bitrate, user_limit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        channelId,
         body.serverId,
         body.parentId || null,
         body.name,
@@ -52,14 +59,10 @@ export const channelRoutes: FastifyPluginAsync = async (app) => {
       ]
     );
 
-    // Use the row returned by INSERT directly (pool.query fetches it via ORDER BY rowid DESC)
-    if (insertResult.rows[0]) {
-      return reply.status(201).send(insertResult.rows[0]);
-    }
-    // Fallback: construct response from request data if DB fetch failed
     return reply.status(201).send({
-      id: 'pending',
+      id: channelId,
       server_id: body.serverId,
+      parent_id: body.parentId || null,
       name: body.name,
       type: body.type,
       topic: body.topic || null,
