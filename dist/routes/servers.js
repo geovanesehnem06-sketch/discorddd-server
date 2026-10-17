@@ -1,6 +1,10 @@
 import { z } from 'zod';
+import { randomBytes } from 'crypto';
 import { pool } from '../db/pool.js';
 import { authenticate } from '../middleware/auth.js';
+function generateId() {
+    return randomBytes(16).toString('hex');
+}
 const createServerSchema = z.object({
     name: z.string().min(2).max(100),
     description: z.string().max(500).optional(),
@@ -24,35 +28,30 @@ export const serverRoutes = async (app) => {
     app.post('/', { preHandler: authenticate }, async (request, reply) => {
         const body = createServerSchema.parse(request.body);
         const userId = request.user.userId;
-        // Insert server
-        const result = pool.query(`INSERT INTO servers (name, description, owner_id)
-       VALUES (?, ?, ?)`, [body.name, body.description || null, userId]);
-        // Get the actual server ID from the returned row
-        const serverId = result.rows[0]?.id || result.lastInsertRowid;
-        if (!serverId) {
-            return reply.status(500).send({ error: 'Failed to create server' });
-        }
+        const serverId = generateId();
+        // Insert server with explicit ID
+        pool.query(`INSERT INTO servers (id, name, description, owner_id)
+       VALUES (?, ?, ?, ?)`, [serverId, body.name, body.description || null, userId]);
         // Add owner as member
         pool.query(`INSERT INTO server_members (server_id, user_id) VALUES (?, ?)`, [serverId, userId]);
         // Create default @everyone role
         pool.query(`INSERT INTO roles (server_id, name, position, permissions, is_default)
        VALUES (?, '@everyone', 0, 0, 1)`, [serverId]);
-        // Create default text channel
-        pool.query(`INSERT INTO channels (server_id, name, type, position)
-       VALUES (?, 'geral', 'text', 0)`, [serverId]);
-        // Create default voice channel
-        pool.query(`INSERT INTO channels (server_id, name, type, position)
-       VALUES (?, 'Geral', 'voice', 1)`, [serverId]);
-        // Get the created server - try by id first, then by rowid
-        let serverResult = pool.query('SELECT id, name, description, icon_url, owner_id, created_at FROM servers WHERE id = ?', [serverId]);
-        // If not found by id, try getting the last inserted server
-        if (serverResult.rows.length === 0) {
-            serverResult = pool.query('SELECT id, name, description, icon_url, owner_id, created_at FROM servers ORDER BY rowid DESC LIMIT 1');
-        }
-        if (serverResult.rows.length === 0) {
-            return reply.status(500).send({ error: 'Failed to retrieve created server' });
-        }
-        return reply.status(201).send(serverResult.rows[0]);
+        // Create default text channel with explicit ID
+        const textChannelId = generateId();
+        pool.query(`INSERT INTO channels (id, server_id, name, type, position)
+       VALUES (?, ?, 'geral', 'text', 0)`, [textChannelId, serverId]);
+        // Create default voice channel with explicit ID
+        const voiceChannelId = generateId();
+        pool.query(`INSERT INTO channels (id, server_id, name, type, position)
+       VALUES (?, ?, 'Geral', 'voice', 1)`, [voiceChannelId, serverId]);
+        return reply.status(201).send({
+            id: serverId,
+            name: body.name,
+            description: body.description || null,
+            icon_url: null,
+            owner_id: userId,
+        });
     });
     // Get server by ID
     app.get('/:id', { preHandler: authenticate }, async (request, reply) => {
