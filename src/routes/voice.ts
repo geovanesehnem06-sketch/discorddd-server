@@ -4,8 +4,9 @@ import { AccessToken } from 'livekit-server-sdk';
 import { pool } from '../db/pool.js';
 import { authenticate } from '../middleware/auth.js';
 
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || '';
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || '';
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || 'APIbYbpL9e5pXZT';
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || 'IQPDtpungZYdC19EGi2BfqKzUCF4o8vUeARPVgJAG1t';
+const LIVEKIT_URL = process.env.LIVEKIT_URL || 'wss://alemao-u35k42ow.livekit.cloud';
 
 export const voiceRoutes: FastifyPluginAsync = async (app) => {
   // Generate LiveKit access token for joining a voice channel
@@ -81,7 +82,7 @@ export const voiceRoutes: FastifyPluginAsync = async (app) => {
 
     return {
       token: jwt,
-      url: process.env.LIVEKIT_URL || 'wss://your-project.livekit.cloud',
+      url: LIVEKIT_URL,
       roomName: `channel_${channelId}`,
     };
   });
