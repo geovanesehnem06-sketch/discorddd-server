@@ -1,4 +1,4 @@
-import initSqlJs, { Database } from 'sql.js';
+import initSqlJs from 'sql.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, '..', '..', 'data');
 const dbPath = path.join(dataDir, 'discorddd.db');
 
-let db: Database | null = null;
+let db: any = null;
 
 // Ensure data directory exists
 if (!fs.existsSync(dataDir)) {
@@ -46,7 +46,7 @@ export function startAutoSave(): void {
   saveInterval = setInterval(saveDb, 5000);
 }
 
-export function getDb(): Database {
+export function getDb(): any {
   if (!db) throw new Error('Database not initialized. Call initDb() first.');
   return db;
 }
@@ -115,7 +115,7 @@ export function query(sql: string, params: any[] = []): QueryResult {
             const columns = rowResult[0].columns;
             const values = rowResult[0].values[0];
             const row: any = {};
-            columns.forEach((col, i) => { row[col] = values[i]; });
+            columns.forEach((col: string, i: number) => { row[col] = values[i]; });
             saveDb();
             return { rows: [row], changes, lastInsertRowid };
           }

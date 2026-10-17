@@ -31,7 +31,7 @@ await app.register(serverRoutes, { prefix: '/api/servers' });
 await app.register(channelRoutes, { prefix: '/api/channels' });
 await app.register(messageRoutes, { prefix: '/api/messages' });
 await app.register(voiceRoutes, { prefix: '/api/voice' });
-app.register(wsHandler, { path: '/ws' });
+app.register(wsHandler);
 
 const port = Number(process.env.PORT) || 3000;
 const host = '0.0.0.0';
