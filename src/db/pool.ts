@@ -196,22 +196,20 @@ export function query(sql: string, params: any[] = []): QueryResult {
       lastInsertRowid = changesResult[0].values[0][1] as number;
     }
 
-    // After any INSERT, fetch the inserted row
+    // After any INSERT, fetch the inserted row using prepare/step (shares write context with database.run)
     if (trimmed.startsWith('INSERT') && changes > 0) {
       const tableMatch = sql.match(/INSERT\s+INTO\s+(\w+)/i);
       if (tableMatch) {
         const tableName = tableMatch[1];
         try {
-          // Always use ORDER BY rowid DESC LIMIT 1 for reliability with TEXT/UUID primary keys
-          const rowResult = database.exec(`SELECT * FROM ${tableName} ORDER BY rowid DESC LIMIT 1`);
-          if (rowResult.length > 0 && rowResult[0].values.length > 0) {
-            const columns = rowResult[0].columns;
-            const values = rowResult[0].values[0];
-            const row: any = {};
-            columns.forEach((col: string, i: number) => { row[col] = values[i]; });
+          const stmt = database.prepare(`SELECT * FROM ${tableName} ORDER BY rowid DESC LIMIT 1`);
+          if (stmt.step()) {
+            const row = stmt.getAsObject();
+            stmt.free();
             saveDb();
             return { rows: [row], changes, lastInsertRowid };
           }
+          stmt.free();
         } catch (err) {
           logger.error(err, 'Failed to fetch inserted row');
         }
