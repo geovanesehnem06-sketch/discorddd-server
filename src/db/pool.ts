@@ -202,14 +202,8 @@ export function query(sql: string, params: any[] = []): QueryResult {
       if (tableMatch) {
         const tableName = tableMatch[1];
         try {
-          // Try multiple approaches to get the inserted row
-          let rowResult = database.exec(`SELECT * FROM ${tableName} WHERE rowid = ?`, [Number(lastInsertRowid)]);
-
-          // If rowid approach didn't work, try getting the last row by ordering DESC
-          if (!rowResult.length || !rowResult[0].values.length) {
-            rowResult = database.exec(`SELECT * FROM ${tableName} ORDER BY rowid DESC LIMIT 1`);
-          }
-
+          // Always use ORDER BY rowid DESC LIMIT 1 for reliability with TEXT/UUID primary keys
+          const rowResult = database.exec(`SELECT * FROM ${tableName} ORDER BY rowid DESC LIMIT 1`);
           if (rowResult.length > 0 && rowResult[0].values.length > 0) {
             const columns = rowResult[0].columns;
             const values = rowResult[0].values[0];
@@ -218,8 +212,8 @@ export function query(sql: string, params: any[] = []): QueryResult {
             saveDb();
             return { rows: [row], changes, lastInsertRowid };
           }
-        } catch {
-          // ignore
+        } catch (err) {
+          logger.error(err, 'Failed to fetch inserted row');
         }
       }
     }
