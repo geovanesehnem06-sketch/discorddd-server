@@ -1,14 +1,19 @@
 import { z } from 'zod';
 import argon2 from 'argon2';
+import { randomBytes } from 'crypto';
 import { pool } from '../db/pool.js';
 import { authenticate, signAccessToken, signRefreshToken } from '../middleware/auth.js';
 import crypto from 'crypto';
+function generateId() {
+    return randomBytes(16).toString('hex');
+}
 const registerSchema = z.object({
     username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/),
     email: z.string().email().max(255),
     password: z.string().min(8).max(128),
 });
 const loginSchema = z.object({
+    username: z.string().optional(),
     email: z.string().min(1),
     password: z.string(),
 });
@@ -27,15 +32,10 @@ export const authRoutes = async (app) => {
                 return reply.status(409).send({ error: 'Email or username already exists' });
             }
             const passwordHash = await argon2.hash(body.password);
-            const result = await pool.query(`INSERT INTO users (username, email, password_hash, display_name)
-         VALUES (?, ?, ?, ?)`, [body.username, body.email.toLowerCase(), passwordHash, body.username]);
-            // Get the inserted user by lastInsertRowid
-            const userId = result.lastInsertRowid;
-            const userResult = await pool.query('SELECT id, username, email, display_name, created_at FROM users WHERE rowid = ?', [userId]);
-            if (userResult.rows.length === 0) {
-                return reply.status(500).send({ error: 'Failed to create user' });
-            }
-            const user = userResult.rows[0];
+            const userId = generateId();
+            pool.query(`INSERT INTO users (id, username, email, password_hash, display_name)
+         VALUES (?, ?, ?, ?, ?)`, [userId, body.username, body.email.toLowerCase(), passwordHash, body.username]);
+            const user = { id: userId, username: body.username, email: body.email.toLowerCase(), display_name: body.username };
             const accessToken = signAccessToken(user.id, user.email);
             const refreshToken = signRefreshToken(user.id);
             const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
