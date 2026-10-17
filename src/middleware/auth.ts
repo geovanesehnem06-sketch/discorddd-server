@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -11,11 +11,13 @@ declare module 'fastify' {
 }
 
 export function signAccessToken(userId: string, email: string): string {
-  return jwt.sign({ sub: userId, email }, JWT_SECRET, { expiresIn: '15m' });
+  const options: SignOptions = { expiresIn: '15m' };
+  return jwt.sign({ sub: userId, email }, JWT_SECRET, options) as string;
 }
 
 export function signRefreshToken(userId: string): string {
-  return jwt.sign({ sub: userId, type: 'refresh' }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN as any };
+  return jwt.sign({ sub: userId, type: 'refresh' }, JWT_SECRET, options) as string;
 }
 
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
