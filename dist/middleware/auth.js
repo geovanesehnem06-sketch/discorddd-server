@@ -1,11 +1,12 @@
 import jwt from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 export function signAccessToken(userId, email) {
     return jwt.sign({ sub: userId, email }, JWT_SECRET, { expiresIn: '15m' });
 }
 export function signRefreshToken(userId) {
-    return jwt.sign({ sub: userId, type: 'refresh' }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    return jwt.sign({ sub: userId, type: 'refresh', jti: randomBytes(16).toString('hex') }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 export async function authenticate(request, reply) {
     const authHeader = request.headers.authorization;

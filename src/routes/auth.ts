@@ -61,7 +61,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      await pool.query(
+      pool.query(
         `INSERT INTO sessions (user_id, refresh_token, device_info, ip_address, expires_at)
          VALUES (?, ?, ?, ?, ?)`,
         [user.id, refreshTokenHash, request.headers['user-agent'] || '', request.ip || '', expiresAt]
@@ -105,7 +105,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      await pool.query(
+      pool.query(
         `INSERT INTO sessions (user_id, refresh_token, device_info, ip_address, expires_at)
          VALUES (?, ?, ?, ?, ?)`,
         [user.id, refreshTokenHash, request.headers['user-agent'] || '', request.ip || '', expiresAt]
@@ -126,8 +126,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     try {
       const body = googleLoginSchema.parse(request.body);
 
-      // Decode Google ID token (in production, verify with Google's public keys)
-      // For development, we'll decode without verification
       const tokenParts = body.idToken.split('.');
       if (tokenParts.length !== 3) {
         return reply.status(400).send({ error: 'Invalid Google token' });
@@ -140,7 +138,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(400).send({ error: 'Google token missing email' });
       }
 
-      // Check if user exists
       let userResult = await pool.query(
         'SELECT id, username, email, display_name, avatar_url FROM users WHERE email = ?',
         [email.toLowerCase()]
@@ -148,27 +145,20 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
       let user;
       if (userResult.rows.length === 0) {
-        // Create new user from Google
         const username = email.split('@')[0] + '_' + Math.random().toString(36).substring(2, 8);
         const displayName = name || username;
+        const googleUserId = generateId();
 
-        const insertResult = await pool.query(
-          `INSERT INTO users (username, email, password_hash, display_name, avatar_url)
-           VALUES (?, ?, ?, ?, ?)`,
-          [username, email.toLowerCase(), 'google_oauth_' + googleId, displayName, picture || null]
+        pool.query(
+          `INSERT INTO users (id, username, email, password_hash, display_name, avatar_url)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [googleUserId, username, email.toLowerCase(), 'google_oauth_' + googleId, displayName, picture || null]
         );
 
-        userResult = await pool.query(
-          'SELECT id, username, email, display_name, avatar_url FROM users WHERE rowid = ?',
-          [insertResult.lastInsertRowid]
-        );
-
-        if (userResult.rows.length === 0) {
-          return reply.status(500).send({ error: 'Failed to create Google user' });
-        }
+        user = { id: googleUserId, username, email: email.toLowerCase(), display_name: displayName, avatar_url: picture || null };
+      } else {
+        user = userResult.rows[0];
       }
-
-      user = userResult.rows[0];
 
       const accessToken = signAccessToken(user.id, user.email);
       const refreshToken = signRefreshToken(user.id);
@@ -176,7 +166,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      await pool.query(
+      pool.query(
         `INSERT INTO sessions (user_id, refresh_token, device_info, ip_address, expires_at)
          VALUES (?, ?, ?, ?, ?)`,
         [user.id, refreshTokenHash, request.headers['user-agent'] || '', request.ip || '', expiresAt]
@@ -217,15 +207,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
       const { user_id, email } = session.rows[0];
 
-      // Rotate refresh token
-      await pool.query('DELETE FROM sessions WHERE refresh_token = ?', [refreshTokenHash]);
+      pool.query('DELETE FROM sessions WHERE refresh_token = ?', [refreshTokenHash]);
 
       const newAccessToken = signAccessToken(user_id, email);
       const newRefreshToken = signRefreshToken(user_id);
       const newHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      await pool.query(
+      pool.query(
         `INSERT INTO sessions (user_id, refresh_token, device_info, ip_address, expires_at)
          VALUES (?, ?, ?, ?, ?)`,
         [user_id, newHash, request.headers['user-agent'] || '', request.ip || '', expiresAt]
