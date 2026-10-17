@@ -1,2 +1,1 @@
-web: node dist/index.js# Railway deploy - Sat Oct 17 02:11:44     2026
-# Force rebuild 1792213985
+web: node dist/index.js
